@@ -1,12 +1,13 @@
 #include "stdafx.h"
 #include "SHA512.h"
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <string>
 
 #define ROTR(n, x) ((x >> n) | (x << (64 - n)))
 #define SHR(n, x) ((x >> n))
-#define Ch(x, y, z) ((x & y) ^ ((!x) & z))
+#define Ch(x, y, z) ((x & y) ^ ((~x) & z))
 #define Maj(x, y, z) ((x & y) ^ (x & z) ^ (y & z))
 #define S0(x) (ROTR(28, x) ^ ROTR(34, x) ^ ROTR(39, x))
 #define S1(x) (ROTR(14, x) ^ ROTR(18, x) ^ ROTR(41, x))
@@ -58,17 +59,20 @@ int main(int argc, char *argv[])
     // pad with 0's
     size_t lengthSize = sizeof(fileLength);
     unsigned int padLength = 127 - ((fileLength + lengthSize) % 128);
-    for (char i = 1; i <= padLength; i++)
+    for (int i = 1; i <= padLength; i++)
         buffer[fileLength + i] = 0;
 
     // append message length
-    for (char i = 1; i <= lengthSize; i++)
-        buffer[fileLength + padLength + i] = fileLength >> ((lengthSize - i) * 8);
+    for (int i = 1; i <= lengthSize; i++)
+        buffer[fileLength + padLength + i] = fileLength * 8 >> ((lengthSize - i) * 8);
 
     // parse message into 64-bit words
     uint64_t* words = reinterpret_cast<uint64_t*>(buffer);
     const unsigned int numBlocks = bufferLength / 128;
 
+    for (int i = 0; i < (bufferLength / 4); i++)
+        words[i] = _byteswap_uint64(words[i]);
+    std::cout << H[0];
     /*
         Hash computation
     */
@@ -79,10 +83,10 @@ int main(int argc, char *argv[])
         // 1. prepare the message schedule:
         uint64_t W[80];
 
-        for (char t = 0; t < 16; t++)
+        for (int t = 0; t < 16; t++)
             W[t] = M[t];
 
-        for (char t = 16; t < 80; t++)
+        for (int t = 16; t < 80; t++)
             W[t] = s1(W[t - 2]) + W[t - 7] + s0(W[t - 15]) + W[t - 16];
 
         // 2. initialize the 8 working variables:
@@ -97,18 +101,18 @@ int main(int argc, char *argv[])
 
         // 3. for t=0 to 79:
         uint64_t T1, T2;
-        for (char t = 0; t < 80; t++)
+        for (int t = 0; t < 80; t++)
         {
-            T1 = h + S1(e) + Ch(e, f, g) + K[t] + W[t];
-            T2 = S0(a) + Maj(a, b, c);
+            T1 = h + S1(e) + Ch(e, f, g) + K[t] + W[t]; //
+            T2 = S0(a) + Maj(a, b, c); //
             h = g;
             g = f;
             f = e;
-            e = d + T1;
+            e = d + T1; //
             d = c;
             c = b;
             b = a;
-            a = T1 + T2;
+            a = T1 + T2; //
         }
 
         // 4. compute the intermediate hash values:
@@ -120,11 +124,14 @@ int main(int argc, char *argv[])
         H[5] += f;
         H[6] += g;
         H[7] += h;
+
+        std::cout << H[0]; // this runs
     }
+    std::cout << H[0]; // this throws a pointer exception
 
     // print hash
-    for (char i = 0; i < 8; i++)
-        std::cout << '|' << std::hex << H[i];
+    for (int i = 0; i < 8; i++)
+        std::cout << std::hex << H[i] << std::endl;
 
     return 0;
 }
