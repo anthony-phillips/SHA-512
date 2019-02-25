@@ -36,46 +36,44 @@ int main(int argc, char *argv[])
     
     // get file length
     infile.seekg(0, infile.end);
-    std::streamoff fileLength = infile.tellg();
+    std::streamoff fileLengthBytes = infile.tellg();
     infile.seekg(0, infile.beg);
 
-    if (fileLength < 0)
+    if (fileLengthBytes < 0)
     {
         std::cout << "Unable to read file";
         return 1;
     }
 
     // read file contents into buffer
-    unsigned int bufferLength = fileLength + 145 - ((fileLength + 17) % 128);
-    char* buffer = new char[bufferLength];
-    infile.read(buffer, fileLength);
+    unsigned int bufferLengthBytes = fileLengthBytes + 145 - ((fileLengthBytes + 17) % 128);
+    char* buffer = new char[bufferLengthBytes];
+    memset(buffer, 0x00, bufferLengthBytes);
+    infile.read(buffer, fileLengthBytes);
     
     /*
         pre-processing
     */
     // append bit '1' to end of message
-    buffer[fileLength] = 0x80;
-
-    // pad with 0's
-    size_t lengthSize = sizeof(fileLength);
-    unsigned int padLength = 127 - ((fileLength + lengthSize) % 128);
-    for (int i = 1; i <= padLength; i++)
-        buffer[fileLength + i] = 0;
+    buffer[fileLengthBytes] = 0x80;
 
     // append message length
-    for (int i = 1; i <= lengthSize; i++)
-        buffer[fileLength + padLength + i] = fileLength * 8 >> ((lengthSize - i) * 8);
+    unsigned int fileLengthBits = fileLengthBytes * 8;
+    size_t lengthSize = sizeof(fileLengthBits);
+    for (int i = 0; i < lengthSize; i++)
+        buffer[bufferLengthBytes - i - 1] = fileLengthBits >> (i * 8);
 
     // parse message into 64-bit words
     uint64_t* words = reinterpret_cast<uint64_t*>(buffer);
-    const unsigned int numBlocks = bufferLength / 128;
 
-    for (int i = 0; i < (bufferLength / 4); i++)
+    unsigned int bufferLengthWords = bufferLengthBytes / 8;
+    for (int i = 0; i < bufferLengthWords; i++)
         words[i] = _byteswap_uint64(words[i]);
-    std::cout << H[0];
+
     /*
         Hash computation
     */
+    const unsigned int numBlocks = bufferLengthWords / 16;
     for (int N = 0; N < numBlocks; N++)
     {
         uint64_t* M = &words[N * 16];   // pointer to current block
@@ -124,14 +122,11 @@ int main(int argc, char *argv[])
         H[5] += f;
         H[6] += g;
         H[7] += h;
-
-        std::cout << H[0]; // this runs
     }
-    std::cout << H[0]; // this throws a pointer exception
 
     // print hash
     for (int i = 0; i < 8; i++)
-        std::cout << std::hex << H[i] << std::endl;
+        std::cout << std::setfill('0') << std::setw(16) << std::hex << H[i];
 
     return 0;
 }
