@@ -1,3 +1,11 @@
+/*
+    Anthony Phillips
+    02/25/2019
+
+    A utility for generating SHA-512 hashes from files.
+    SHA-512 implementation as specified in FIPS PUB 180-4.
+    File name can be passed as a command line argument.
+*/
 #include "stdafx.h"
 #include "SHA512.h"
 #include <fstream>
@@ -5,8 +13,11 @@
 #include <iostream>
 #include <string>
 
+// Operations
 #define ROTR(n, x) ((x >> n) | (x << (64 - n)))
 #define SHR(n, x) ((x >> n))
+
+// SHA-512 functions
 #define Ch(x, y, z) ((x & y) ^ ((~x) & z))
 #define Maj(x, y, z) ((x & y) ^ (x & z) ^ (y & z))
 #define S0(x) (ROTR(28, x) ^ ROTR(34, x) ^ ROTR(39, x))
@@ -28,7 +39,7 @@ int main(int argc, char *argv[])
         std::getline(std::cin, fileName);
     }
     else
-        fileName = argv[1];
+        fileName = argv[1]; // file name can be passed as an arg
 
     // open file
     std::ifstream infile;
@@ -48,7 +59,7 @@ int main(int argc, char *argv[])
     // read file contents into buffer
     unsigned int bufferLengthBytes = fileLengthBytes + 145 - ((fileLengthBytes + 17) % 128);
     char* buffer = new char[bufferLengthBytes];
-    memset(buffer, 0x00, bufferLengthBytes);
+    memset(buffer, 0x00, bufferLengthBytes);    // Fill with 0's so we don't have to pad
     infile.read(buffer, fileLengthBytes);
     
     /*
@@ -101,16 +112,16 @@ int main(int argc, char *argv[])
         uint64_t T1, T2;
         for (int t = 0; t < 80; t++)
         {
-            T1 = h + S1(e) + Ch(e, f, g) + K[t] + W[t]; //
-            T2 = S0(a) + Maj(a, b, c); //
+            T1 = h + S1(e) + Ch(e, f, g) + K[t] + W[t];
+            T2 = S0(a) + Maj(a, b, c);
             h = g;
             g = f;
             f = e;
-            e = d + T1; //
+            e = d + T1;
             d = c;
             c = b;
             b = a;
-            a = T1 + T2; //
+            a = T1 + T2;
         }
 
         // 4. compute the intermediate hash values:
