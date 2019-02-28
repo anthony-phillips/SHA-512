@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 
     // open file
     std::ifstream infile;
-    infile.open(fileName);
+    infile.open(fileName, _IOSbinary);
     
     // get file length
     infile.seekg(0, infile.end);
